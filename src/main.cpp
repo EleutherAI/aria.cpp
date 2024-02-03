@@ -127,26 +127,15 @@ bool aria_model_load(const std::string & fname, aria_model & model, gpt_vocab & 
     }
 
     // load vocab
-    /*
+    // Tokens in aria do not have string representations. We simply map each id to its number representation.
     {
         const int32_t n_vocab = model.hparams.n_vocab;
 
-        std::string word;
-        std::vector<char> buf(128);
-
         for (int i = 0; i < n_vocab; i++) {
-            uint32_t len;
-            fin.read((char *) &len, sizeof(len));
-
-            buf.resize(len);
-            fin.read((char *) buf.data(), len);
-            word.assign(buf.data(), len);
-
-            vocab.token_to_id[word] = i;
-            vocab.id_to_token[i] = word;
+            vocab.token_to_id[std::to_string(i)] = i;
+            vocab.id_to_token[i] = std::to_string(i);
         }
     }
-    */
 
     // for the big tensors, we have the option to store the data in 16-bit floats or quantized
     // in order to save memory and also to speed up the computation
@@ -720,7 +709,6 @@ int main(int argc, char ** argv) {
 
     std::vector<float> logits;
 
-    // todo:----------------here------------
     // tokenize the prompt
     //std::vector<gpt_vocab::id> embd_inp = ::gpt_tokenize(vocab, params.prompt);
 
@@ -741,6 +729,7 @@ int main(int argc, char ** argv) {
 
     // determine the required inference memory per token:
     size_t mem_per_token = 0;
+    params.n_threads = 1;
     aria_eval(model, params.n_threads, 0, { 0, 1, 2, 3 }, logits, mem_per_token);
 
     for (size_t i = embd.size(); i < embd_inp.size() + params.n_predict; i++) {
@@ -792,7 +781,6 @@ int main(int argc, char ** argv) {
 
         // display text
         for (auto id : embd) {
-            // printf("%s", vocab.id_to_token[id].c_str());
             printf("[%d], ", id);
         }
         fflush(stdout);
