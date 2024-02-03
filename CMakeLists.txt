@@ -7,8 +7,8 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(GGML_STANDALONE ON)
-    #include(ggml/cmake/GitVars.cmake)
-    include(ggml/cmake/BuildTypes.cmake)
+    #include(cmake/GitVars.cmake)
+    #include(cmake/BuildTypes.cmake)
 else()
     set(GGML_STANDALONE OFF)
 endif()
@@ -105,11 +105,12 @@ if (GGML_ALL_WARNINGS)
 endif()
 
 if (NOT MSVC)
-    add_compile_options(
-        "$<$<COMPILE_LANGUAGE:C>:-Werror=vla>"
-        "$<$<COMPILE_LANGUAGE:CXX>:-Werror=vla>"
-        "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler;-Werror=vla>"
-    )
+    # TODO: temporary disabled until we figure out ggml-metal.m
+    #add_compile_options(
+    #    "$<$<COMPILE_LANGUAGE:C>:-Werror=vla>"
+    #    "$<$<COMPILE_LANGUAGE:CXX>:-Werror=vla>"
+    #    "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler;-Werror=vla>"
+    #)
 endif()
 
 #
@@ -159,6 +160,10 @@ if (CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
     add_compile_definitions(_BSD_SOURCE)
 endif()
 
+if (WHISPER_PERF)
+    set(WHISPER_EXTRA_FLAGS ${WHISPER_EXTRA_FLAGS} -DGGML_PERF)
+endif()
+
 # dependencies
 
 set(CMAKE_C_STANDARD   11)
@@ -184,36 +189,31 @@ if (GGML_BUILD_TESTS)
     endif()
 endif()
 
-
-add_subdirectory(ggml/src)
+if (GGML_ALL_WARNINGS)
+  if (NOT MSVC)
+      set(cxx_flags
+          # TODO(marella): Add other warnings.
+          -Wpedantic
+          -Wunused-variable
+          -Wno-unused-function
+          -Wno-multichar
+      )
+      add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${cxx_flags}>")
+  endif()
+endif()
 
 add_library(common STATIC ggml/examples/common.cpp)
-target_include_directories(common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ggml/examples)
 
 add_library(common-ggml STATIC ggml/examples/common-ggml.cpp)
 target_link_libraries(common-ggml PRIVATE ggml)
-target_include_directories(common-ggml PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(common-ggml PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ggml/examples)
 
-set(TEST_TARGET aria)
-add_executable(${TEST_TARGET} main.cpp)
-target_link_libraries(${TEST_TARGET} PRIVATE ggml common common-ggml)
+add_subdirectory(ggml/src)
+add_subdirectory(src)
 
-set(TEST_TARGET aria-quantize)
-add_executable(${TEST_TARGET} quantize.cpp)
-target_link_libraries(${TEST_TARGET} PRIVATE ggml common common-ggml)
-#add_subdirectory(src)
-
-#if (GGML_BUILD_TESTS)
-#    enable_testing()
-#    add_subdirectory(tests)
-#endif ()
-
-#if (GGML_BUILD_EXAMPLES)
-#    add_subdirectory(examples)
-#endif ()
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ggml.pc.in
-               ${CMAKE_CURRENT_BINARY_DIR}/ggml.pc
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ggml/ggml.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/ggml/ggml.pc
                @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ggml.pc
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ggml/ggml.pc
         DESTINATION share/pkgconfig)

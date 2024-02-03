@@ -12,6 +12,11 @@ tmp/
 models/
 models-mnt
 
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
 compile_commands.json
 CMakeSettings.json
 .vs/
