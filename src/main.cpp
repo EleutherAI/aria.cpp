@@ -713,10 +713,11 @@ int main(int argc, char ** argv) {
     //std::vector<gpt_vocab::id> embd_inp = ::gpt_tokenize(vocab, params.prompt);
 
     // Beethoven sonata
-    std::vector<gpt_vocab::id> embd_inp = {29, 6, 18, 0, 584, 12107, 11902, 503, 12107, 11912, 539, 12107, 11912, 431, 12107, 11912, 395, 12107, 11913, 476, 12107};
+    std::vector<gpt_vocab::id> embd_inp = {29, 6, 18, 0};
 
     
     params.n_predict = std::min(params.n_predict, model.hparams.n_ctx - (int) embd_inp.size());
+    printf("n_predict = %d\n", params.n_predict);
 
     printf("%s: number of tokens in prompt = %zu\n", __func__, embd_inp.size());
     /*
@@ -729,7 +730,6 @@ int main(int argc, char ** argv) {
 
     // determine the required inference memory per token:
     size_t mem_per_token = 0;
-    params.n_threads = 1;
     aria_eval(model, params.n_threads, 0, { 0, 1, 2, 3 }, logits, mem_per_token);
 
     for (size_t i = embd.size(); i < embd_inp.size() + params.n_predict; i++) {
@@ -786,7 +786,7 @@ int main(int argc, char ** argv) {
         fflush(stdout);
 
         // end of text token
-        if (embd.back() == 0) {
+        if (i > embd_inp.size() && embd.back() == 0) {
             break;
         }
     }
